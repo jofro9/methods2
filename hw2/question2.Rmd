@@ -1,0 +1,40 @@
+---
+author: "Joseph Froelicher"
+title: "Question 2"
+date: "2/26/2021"
+output: pdf_document
+---
+
+```{r setup}
+knitr::opts_chunk$set(echo = TRUE)
+data = read.table("copd.txt", header = T)
+
+library(aod)
+```
+
+# Part A
+```{r a}
+model1 = glm(copd ~ age + gender + smoker + BMI + BMIsquared, data = data, family = binomial)
+summary(model1)
+t_w = summary(model1)$coefficients[6, 3]
+p_w = 2*(1-pnorm(test_statistic))
+
+```
+
+# Part B
+```{r b}
+model0 = glm(copd ~ age + gender + smoker + BMI, data = data, family = binomial)
+t_lr = (-2 * log(exp(logLik(model0)) / exp(logLik(model1))))[1]
+df = 1
+p_lr = pchisq(t_lr, df, lower.tail = F)
+
+```
+
+# Part C
+Yes.
+
+# Part D
+Since we are using a higher order term for BMI, in order to avoid high correlation between BMI and its higher order term, BMI square, we should center the variable.
+
+```{r ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
+```

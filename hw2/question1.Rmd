@@ -1,0 +1,103 @@
+---
+author: "Joseph Froelicher"
+title:  "Question 1"
+date: "February 26, 2020"
+output: pdf_document
+---
+\usepackage{bm}
+
+# Part A
+$$ln\left(\frac{p_i}{1-p_i}\right) = \textbf{X}_j\mathbf{\beta}$$
+$$\hat{\beta_0} = ln\left(\frac{p(y=1|x_j=0)}{1-p(y=1|x_j=0)}\right) = ln\left(\frac{(619/2416)}{1-(619/2416)}\right)=-1.065769$$
+$$\hat{\beta_1}=(\hat{\beta_0}+\hat{\beta_1})-\hat{\beta_0}=ln\left(\frac{p(y=1|x_j=1)}{1-p(y=1|x_j=1)}\right)-\hat{\beta_0} = ln\left(\frac{(355/771)}{1-(355/771)}\right)-(-1.065769)=0.9072015$$
+$$\hat{\beta_2}=(\hat{\beta_0}+\hat{\beta_2})-\hat{\beta_0}=ln\left(\frac{p(y=1|x_j=2)}{1-p(y=1|x_j=2)}\right)-\hat{\beta_0} = ln\left(\frac{(162/731)}{1-(162/731)}\right)-(-1.065769)=-0.1905151$$
+
+# Part B
+$$L(Y_i|p)=\prod_{i=1}^N{n_i\choose Y_i}p^{Y_i}(1-p)^{n_i-Y_i}$$
+$$L(Y_i|p)=\prod_{i=1}^N{n_i\choose Y_i}\left(\frac{e^{\textbf{X}\beta}}{1+e^{\textbf{X}\beta}}\right)^{Y_i}\left(1-\frac{e^{\textbf{X}\beta}}{1+e^{\textbf{X}\beta}}\right)^{n_i-Y_i}$$
+
+$$L(Y_i|p)=\left(\frac{e^{\textbf{X}\beta}}{1+e^{\textbf{X}\beta}}\right)^{\sum_{i=1}^nY_i}\left(1-\frac{e^{\textbf{X}\beta}}{1+e^{\textbf{X}\beta}}\right)^{n-\sum_{i=1}^nY_i}$$
+$$ln(L(Y_i|p))=ln\left(\left(\frac{e^{\textbf{X}\beta}}{1+e^{\textbf{X}\beta}}\right)^{\sum_{i=1}^nY_i}\left(1-\frac{e^{\textbf{X}\beta}}{1+e^{\textbf{X}\beta}}\right)^{n-\sum_{i=1}^nY_i}\right)$$
+$$l(Y_i|p)=\sum_{i=1}^n\left(ln{n\choose Y_i}+Y_i\:ln\left(\frac{e^{\textbf{X}\beta}}{1+e^{\textbf{X}\beta}}\right)+(n-Y_i)\:ln\left(1-\frac{e^{\textbf{X}\beta}}{1+e^{\textbf{X}\beta}}\right)\right)$$
+$$l(Y_i|p)=\left[ln{n_i\choose Y_i}+Y_i\:ln\left(\frac{e^{\beta_0}}{1+e^{\beta_0}}\right)+(n_i-Y_i)\:ln\left(1-\frac{e^{\beta_0}}{1+e^{\beta_0}}\right)\right]$$
+$$\;\;\;+\;\left[ln{n_i\choose Y_i}+Y_i\:ln\left(\frac{e^{\beta_0+X_1\beta_1}}{1+e^{\beta_0+X_1\beta_1}}\right)+(n_i-Y_i)\:ln\left(1-\frac{e^{\beta_0+X_1\beta_1}}{1+e^{\beta_0+X_1\beta_1}}\right)\right]$$
+$$\;\;\;+\;\left[ln{n_i\choose Y_i}+Y_i\:ln\left(\frac{e^{\beta_0+X_2\beta_2}}{1+e^{\beta_0+X_2\beta_2}}\right)+(n_i-Y_i)\:ln\left(1-\frac{e^{\beta_0+X_2\beta_2}}{1+e^{\beta_0+X_2\beta_2}}\right)\right]$$
+
+```{r b}
+log(choose(2416,619))
+
+data = data.frame(
+  "strikes" = c("1", "2", "3"),
+  "misconduct" = c(619, 355, 162),
+  "no_misconduct" = c(1797, 416, 569)
+)
+
+model1 = glm(
+  cbind(misconduct, no_misconduct) ~ strikes, data, family = binomial
+)
+
+like1 = logLik(model1)
+
+```
+Using the `logLik()` function in R, we get the value of `r like1` for the likelihood of model 1.
+
+# Part C
+$$l(Y_i|p)=\sum_{i=1}^n\left(Y_i\:ln(p_i)+(n-Y_i)\:ln(1-p_i)\right)$$
+$$l(Y_i, X_{ij}|\beta)=\sum_{i=1}^n\left(ln{n\choose Y_i}+Y_i\:ln(\frac{e^{\beta_0}}{1-e^{\beta_0}})+(1-Y_i)\:ln(\frac{e^{\beta_0}}{1-e^{\beta_0}})\right)$$
+$$l(Y_i, X_{ij}|\beta)=\sum_{i=1}^n\left(Y_i\:ln(\frac{e^{\beta_0}}{1-e^{\beta_0}})+(1-Y_i)\:ln(\frac{e^{\beta_0}}{1-e^{\beta_0}})\right)$$
+
+```{r c}
+model0 = glm(
+  cbind(misconduct, no_misconduct) ~ 1, data, family = binomial
+)
+
+like0 = logLik(model0)
+
+```
+
+Using the `logLik()` function in R, we get the value of `r like0` for the likelihood of model 0.
+
+# Part D
+$$T_{LR} = -2ln\left[\frac{L(p_{H_0})}{L(p_{MLE})}\right]$$
+$$T_{LR} = -2ln\left[\frac{e^{-76.41084}}{e^{-10.86998}}\right]$$
+$$X_{2, 1-0.95}^2 = 5.991$$
+```{r d}
+pchisq(131.0817, 3, lower.tail = F)
+
+```
+$$P\{(T_{LR} = 131.0817) > 5.991\} < 0.001$$
+$$(T_{LR} = 131.0817) \sim X_{3, 0.95}^2$$
+
+# Part E
+```{r}
+data_numeric = data.frame(
+  "strikes" = c(1, 2, 3),
+  "misconduct" = c(619, 355, 162),
+  "no_misconduct" = c(1797, 416, 569)
+)
+
+model2 = glm(
+  cbind(misconduct, no_misconduct) ~ strikes, data_numeric, family = binomial
+)
+
+summary(model2)
+like2 = logLik(model2)
+
+p_1 = exp(summary(model2)$coefficients[1, 1] + summary(model2)$coefficients[2, 1] * 1) /
+  (1 - exp(summary(model2)$coefficients[1, 1] + summary(model2)$coefficients[2, 1] * 1))
+
+p_3 = exp(summary(model2)$coefficients[1, 1] + summary(model2)$coefficients[2, 1] * 3) /
+  (1 - exp(summary(model2)$coefficients[1, 1] + summary(model2)$coefficients[2, 1] * 3))
+
+```
+
+The predicted probability of a misconduct violation during the first year in prison for a prisoner with 1 strike is `r p_1`. The predicted probability of a misconduct violation during the first year in prison for a prisoner with 3 strikes is `r p_3`.
+
+# Part F
+```{r}
+p_3 / p_1
+```
+$$CI = [e^{\hat{\beta}-Z_{1-\frac{\alpha}{2}}\hat{SE}(\hat{\beta})}, e^{\hat{\beta}+Z_{1-\frac{\alpha}{2}}\hat{SE}(\hat{\beta})}]$$
+
+```{r ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
+```
