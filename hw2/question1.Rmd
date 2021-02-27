@@ -24,20 +24,38 @@ $$\;\;\;+\;\left[ln{n_i\choose Y_i}+Y_i\:ln\left(\frac{e^{\beta_0+X_1\beta_1}}{1
 $$\;\;\;+\;\left[ln{n_i\choose Y_i}+Y_i\:ln\left(\frac{e^{\beta_0+X_2\beta_2}}{1+e^{\beta_0+X_2\beta_2}}\right)+(n_i-Y_i)\:ln\left(1-\frac{e^{\beta_0+X_2\beta_2}}{1+e^{\beta_0+X_2\beta_2}}\right)\right]$$
 
 ```{r b}
-log(choose(2416,619))
-
 data = data.frame(
   "strikes" = c("1", "2", "3"),
   "misconduct" = c(619, 355, 162),
   "no_misconduct" = c(1797, 416, 569)
 )
 
+# by hand
+p1 = data[1, 2] / (data[1, 2] + data[1, 3])
+p2 = data[2, 2] / (data[2, 2] + data[2, 3])
+p3 = data[3, 2] / (data[3, 2] + data[3, 3])
+
+n1 = data[1, 2] + data[1, 3]
+n2 = data[2, 2] + data[2, 3]
+n3 = data[3, 2] + data[3, 3]
+
+c1 = data[1, 2]
+c2 = data[2, 2]
+c3 = data[3, 2]
+
+w1 = data[1, 3]
+w2 = data[2, 3]
+w3 = data[3, 3]
+  
+ll_m1 = lchoose(n1, c1) + c1 * log(p1) + w1 * log(1 - p1)
+ll_m2 = lchoose(n2, c2) + c2 * log(p2) + w2 * log(1 - p2)
+ll_m3 = lchoose(n3, c3) + c3 * log(p3) + w3 * log(1 - p3)
+
 model1 = glm(
   cbind(misconduct, no_misconduct) ~ strikes, data, family = binomial
 )
 
 like1 = logLik(model1)
-
 ```
 Using the `logLik()` function in R, we get the value of `r like1` for the likelihood of model 1.
 
@@ -83,19 +101,13 @@ model2 = glm(
 summary(model2)
 like2 = logLik(model2)
 
-p_1 = exp(summary(model2)$coefficients[1, 1] + summary(model2)$coefficients[2, 1] * 1) /
-  (1 - exp(summary(model2)$coefficients[1, 1] + summary(model2)$coefficients[2, 1] * 1))
-
-p_3 = exp(summary(model2)$coefficients[1, 1] + summary(model2)$coefficients[2, 1] * 3) /
-  (1 - exp(summary(model2)$coefficients[1, 1] + summary(model2)$coefficients[2, 1] * 3))
-
 ```
 
-The predicted probability of a misconduct violation during the first year in prison for a prisoner with 1 strike is `r p_1`. The predicted probability of a misconduct violation during the first year in prison for a prisoner with 3 strikes is `r p_3`.
+The predicted probability of a misconduct violation during the first year in prison for a prisoner with 1 strike is `r p1`. The predicted probability of a misconduct violation during the first year in prison for a prisoner with 3 strikes is `r p3`.
 
 # Part F
 ```{r}
-p_3 / p_1
+p3 / p1
 ```
 $$CI = [e^{\hat{\beta}-Z_{1-\frac{\alpha}{2}}\hat{SE}(\hat{\beta})}, e^{\hat{\beta}+Z_{1-\frac{\alpha}{2}}\hat{SE}(\hat{\beta})}]$$
 
