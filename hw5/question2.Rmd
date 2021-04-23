@@ -1,0 +1,62 @@
+---
+title: "Question 2"
+author: "Joseph Froelicher"
+date: "4/23/2021"
+output: pdf_document
+---
+
+```{r setup, echo = FALSE, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE, include = TRUE, warning = FALSE)
+
+library(haven)
+library(lmerTest)
+
+data = read_dta('exercise_therapy.dta')
+
+```
+
+## Part A
+$$ Y_{ij} = \beta_0 + \beta_1treatment_{ij} + \beta_2time_{ij} + \beta_3(treatment_{ij}*time_{ij}) + b_i + \epsilon_{ij} $$
+* $b_i \sim N(0, \sigma_b^2)$\newline
+* $\epsilon_{ij} \sim N(0, \sigma^2)$\newline
+* $Corr(\epsilon_{ij}, \epsilon_{ik}) = 0$\newline
+* $Corr(b_i, \epsilon_{ij}) = 0$\newline
+
+## Part B
+In the model above, the fixed effects are the treatment, time, and the interaction term of treatment and time, whose coefficients are represented by $\beta_i$. The random effects for the model above are the subject ID's, represented by $b_i$.
+
+## Part C
+```{r c}
+model0 = lmer(y ~ (1  | id) + factor(trt) + time + factor(trt) * time , data = data)
+output = summary(model0)
+fixed = coef(output)
+
+rand = data.frame(
+  'variance' = c(10.678, 1.212)
+)
+
+rownames(rand) = c('Intercept', 'Residual')
+
+fixed
+rand
+
+```
+
+## Part D
+```{r d}
+sigma_b = 10.678
+sigma = 1.212
+icc = sigma_b / (sigma + sigma_b)
+
+```
+
+The estimated variance of the random intercepts i s `r sigma_b`. The differences between subjects is accounting for `r round(icc * 100, 2)`% of variablility in strength, relative to the variability within subjects.
+
+## Part E
+The fixed effect for the second treatment group is not significant (p > 0.05). However, the fixed effect for the covariate of interest time, is significant (p < 0.001). The average increase in strength for a one day increase is 0.12145. The interaction between linear time measured in days, and treatment group is not significant (p > 0.05).
+
+## Part F
+The random intercept term, when treatment group is 1, was statistically significant (p < 0.001). The average population-level strength at baseline (time = 0 days) for treatment group 1 was `r round(fixed[1, 1], 2)`. This is interpretable, because measurements for baseline were taken at 0 days.
+
+## Part G
+While it appeared from our plots that there may be a difference between the two treatment groups in strength, nothing in our anaylsis has suggest a statistically significant difference between the two treatment groups.

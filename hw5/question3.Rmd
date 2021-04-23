@@ -1,0 +1,74 @@
+---
+title: "Question 3"
+author: "Joseph Froelicher"
+date: "4/23/2021"
+output: pdf_document
+---
+
+```{r setup, echo = FALSE, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE, include = TRUE, warning = FALSE)
+
+library(haven)
+library(lmerTest)
+library(tidyverse)
+library(patchwork)
+
+data = read_dta('exercise_therapy.dta')
+
+```
+
+## Part A
+```{r a}
+model1 = lmer(y ~ (1 + time | id) + time + factor(trt), data = data)
+output = summary(model1)
+fixed = coef(output)
+
+```
+* $\beta_0$ = `r round(fixed[1, 1], 2)`: the average population strength at baseline (0 days) for those using treatment 1.
+* $\beta_1$ = `r round(fixed[2, 1], 2)`: the average difference in strength for a one day increase in time, controlling for treatment group.
+* $\beta_2$ = `r round(fixed[3, 1], 2)`: the average difference in strenght for those using treatment 2 comapred to those using treatment 1.
+
+## Part B
+```{r b}
+int = 9.9760
+slope = 0.0334
+corr = -0.03
+
+```
+The estimated variance of the random intercept in this model is `r round(int, 2)`. The estimated variance of the random slope is this model is `r round(slope, 2)`. The correlation between the random intercept and slope is `r corr`.
+
+## Part C
+```{r c}
+model0 = lmer(y ~ (1  | id) + factor(trt) + time + factor(trt) * time , data = data)
+
+p1 = tibble(intercept = ranef(model0)$id[["(Intercept)"]]) %>%
+ggplot(aes(x = intercept)) + 
+  geom_histogram(bins = 18) +
+  labs(x = "random intercept", title = "intercepts, intercept model")
+
+p1
+
+```
+This first plot is the distribution of the random intercepts of the random intercept model. The intercepts appear to be distributed around zero, however they are cetainly not distributed normally. This violates one of our assumptions, that the intercepts ne normally distributed about zero.
+
+```{r}
+p2 = tibble(intercept = ranef(model1)$id[["(Intercept)"]]) %>%
+ggplot(aes(x = intercept)) + 
+  geom_histogram(bins = 20) +
+  labs(x = "random intercept", title = "intercepts, random slope model")
+
+p2
+
+```
+This second plot is the distribution of the intercepts in the random slope model. The intercepts again appear to be distributed equally about zero, however, it would be a stretch to call these intercepts normally distributed.
+
+```{r}
+p3 = tibble(intercept = ranef(model1)$id[["time"]]) %>%
+ggplot(aes(x = intercept)) + 
+  geom_histogram(bins = 10) +
+  labs(x = "random slopes", title = "slopes, random slope model")
+
+p3
+
+```
+This final plot is the distribution of the slopes of the random slope model. These slopes are not remotely normally distributed. We should be skeptical of the viability of this model.

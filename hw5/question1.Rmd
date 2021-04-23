@@ -1,0 +1,58 @@
+---
+title: "Question 1"
+author: "Joseph Froelicher"
+date: "4/23/2021"
+output: pdf_document
+---
+
+```{r setup, echo = FALSE, include = FALSE}
+knitr::opts_chunk$set(echo = FALSE, include = TRUE, warning = FALSE)
+
+library(dplyr)
+library(ggplot2)
+library(haven)
+
+data = read_dta('exercise_therapy.dta')
+
+```
+
+## Part A
+```{r a}
+labelled_data = data
+labelled_data$trt = as.factor(labelled_data$trt)
+
+levels(labelled_data$trt)[levels(labelled_data$trt) == "1"] = "Treatment Group 1"
+levels(labelled_data$trt)[levels(labelled_data$trt) == "2"] = "Treatment Group 2"
+
+set.seed(867309)
+ids = sample(unique(labelled_data$id), 6)
+
+# plot 1
+labelled_data %>% ggplot(aes(time, y, group = id)) +
+  facet_wrap( ~ trt) +
+  geom_point(size = 0.5) +
+  geom_line(alpha = 0.5) +
+  stat_summary(aes(group = 1), geom = "line", fun.y = mean, size = 1, color = "red") +
+  geom_line(data = filter(labelled_data, id %in% ids), aes(group = id), color = "purple") +
+  labs(x = "Time (days)", y = "Strength")
+
+```
+For both treatment group 1 and treatment group 2, strength appears to be increasing over time, on average for all patients. Treatment group 2 also appears to have slightly higher values of strength for all times.
+
+## Part B
+```{r b}
+# plot 2
+labelled_data %>% ggplot(aes(time, y, group = id)) +
+  geom_point(size = 0.5) +
+  geom_line(alpha = 0.5) +
+  stat_smooth(aes(group = trt, color = trt), method = loess, geom = "line", fun.y = mean, size = 1) +
+  labs(x = "Time (days)", y = "Strength") +
+  theme(legend.title = element_blank())
+```
+We can see more clearly now that treatment group is in fact experience higher strengths on average over all times. At a close examination, treatment group 2 seems to be experiencing increasing strength on average until time is 7.5 days, at which point strength appears to plateau and begin decreasing. Treatment group 1 is increasing until time 3.75 at which point strenth appear to plateau.
+
+## Part C
+There is certainly a visual difference in intercept for subjects, and we should at least consider a random intercept model. The slopes of the individuals is more difficult to dicern from this plot, but because of the shapes of the individual trends, we should at the very least consider using a random slope model as well. There is some indication, based on the average slope for each of the treatment groups that there may not be much diffence of slopes between subjects, which would lead us to possibly consider not using a random slope model.
+
+
+
