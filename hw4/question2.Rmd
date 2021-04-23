@@ -1,0 +1,74 @@
+---
+title: "Question 2"
+author: "Joseph Froelicher"
+date: "4/9/2021"
+output: pdf_document
+---
+
+```{r setup}
+knitr::opts_chunk$set(echo = TRUE, include = TRUE)
+
+```
+
+## Part A
+```{r a}
+skincancer = read.csv("skincancer.csv", header = TRUE)
+
+for (i in 1:dim(skincancer)[1]){
+  if (skincancer$city[i] == 'Dallas') {
+    skincancer$city[i] = 1
+  } else {
+    skincancer$city[i] = 0
+  }
+}
+
+model1 = glm(cases ~ city + offset(log(py1000)) + age.group, family = "poisson", data = skincancer)
+table = summary(model1)$coefficients
+
+rownames(table) = c(
+  'Minneappolis (B0)', 'Dallas (B1)', '25-34', '35-44', '45-54', '55-64', '65-74', '75-84', '85+'
+)
+
+colnames(table) = c('Estimate', 'Std. Error', 'Z-value', 'p-value')
+table
+
+```
+
+## Part B
+* $H_0$: $e^{\beta_{Dallas}} = 2$ which means $\beta_{Dallas} = \log(2)$
+* $H_A$: $e^{\beta_{Dallas}} \ne 2$
+* Test statistic: 
+
+The Wald test statistic is given by:
+$$
+Z^2 = \frac{(\hat{\beta}_{Dallas} - \beta_{H_0})^2}{Var(\hat{\beta}_{Dallas})} \sim \chi^2_1
+$$
+
+$$
+Z^2 = \frac{( 0.787 - \log(2))^2}{0.0514^2} \sim \chi^2_1
+$$
+
+```{r b}
+Z = (coef(model1)[2] - log(2))/sqrt(vcov(model1)[2,2])
+p = pchisq(Z^2, df = 1, lower.tail = FALSE)
+
+```
+
+We conclude that the there is not evidence to suggest that the age-adjusted non-melanoma skin cancer rates in Dallas for women was *not* double that of women in Minneapolis (p = `r round(p, 3)`).
+
+## Part C
+* $H_0$: $\beta_{25 to 34} = 0$ (15 to 24 is the reference group)
+* $H_A$: $\beta_{25 to 34} \ne 0$
+* Test statistic and Null distribution
+
+The test statistic reported by R is the Wald test statistic, Z, which follows a standard normal distribution under the null hypothesis.
+
+$$Z = 4.77 \sim N(0, 1)$$
+We conclude that there is significant evidence to suggest that rates in the 25 to 34 age group are not equal to those in the 15 to 24 age group (p < 0.001). 
+
+## Part D
+```{r d}
+r = exp(sum(c(1, 0, 0, 0, 1, 0, 0, 0, 0) * coef(model1)))
+
+```
+The estimated rate of non-melanoma skin cancer in the 45 to 54 year age group in women is `r round(r, 3)`.

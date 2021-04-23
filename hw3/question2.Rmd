@@ -1,0 +1,182 @@
+---
+author: "Joseph Froelicher"
+title: "Question 2"
+date: "3/12/2021"
+output: pdf_document
+---
+
+```{r setup, echo = FALSE, include = FALSE}
+library(tidyverse)
+
+```
+
+## Part A
+
+```{r a, echo = FALSE, include = FALSE}
+# Part A
+n = 100000
+s = 1
+pde = 0.1
+pdu = 0.05
+pe = 0.3
+
+b0 = log(pdu / (1 - pdu))
+b1 = log(pde / (1 - pde) / (pdu / (1 - pdu)))
+
+```
+
+We need two parameters to simulate a logistic regression to model the outcome using the only the exposure, and those are $\beta_0$ and $\beta_1$. In order to calculate $\beta_0$ and $\beta_1$, we need the probability of disease, given exposure $P(Y = 1|X = 1)$, and the probability of disease, given no exposure $P(Y = 1|X = 0)$.
+\newline
+$$\beta_0 = ln\left(\frac{P(Y = 1|X = 0)}{1 - P(Y = 1|X = 0)}\right)$$
+$$\beta_1 = ln\left(\frac{\left[\frac{P(Y = 1|X = 1)}{1 - P(Y = 1|X = 1)}\right]}{\left[\frac{P(Y = 1|X = 0)}{1 - P(Y = 1|X = 0)}\right]}\right)$$
+$\beta_0$ = `r b0`,
+$\beta_1$ = `r b1`
+
+## Part B
+
+```{r b, echo = TRUE, include = TRUE}
+# Part B
+set.seed(8675309)
+
+x = rbinom(n, s, pe)
+pee = plogis(b0 + b1 * x)
+y = rbinom(n, s, pee)
+
+data = data.frame(
+  "id" = 1:n,
+  "outcome" = y,
+  "exposure" = x
+)
+
+# check population proportions
+sume = 0
+counte = 0
+sumu = 0
+countu = 0
+
+for (i in 1:dim(data)[1]) {
+  if (data$exposure[i] == 0) {
+    sumu = sumu + data$outcome[i]
+    countu = countu + 1
+    
+  } else {
+    sume = sume + data$outcome[i]
+    counte = counte + 1
+  }
+}
+
+head(data)
+tail(data)
+
+# test proportion unexposed
+sumu / countu
+
+#test proportion exposed
+sume / counte
+
+```
+
+## Part C
+
+```{r c, echo = FALSE, include = FALSE}
+# Part C
+# cohort study
+N = 50
+b = 1000
+
+datae = data[data$exposure == 1,]
+datau = data[data$exposure == 0,]
+estimates = data.frame(
+  "seed" = rep(NA, b),
+  "b0_hat" = rep(NA, b),
+  "b1_hat" = rep(NA, b)
+)
+
+for (i in 1:b) {
+  set.seed(i)
+  exposed = sample(datae$outcome, N )
+  unexposed = sample(datau$outcome, N)
+  temp_dat = data.frame(
+    "exposure" = c(rep(1, N), rep(0, N)),
+    "outcome" = c(exposed, unexposed)
+  )
+  
+  model = glm(outcome ~ exposure, family = binomial, data = temp_dat)
+  estimates$seed[i] = i
+  estimates$b0_hat[i] = summary(model)$coefficients[1, 1]
+  estimates$b1_hat[i] = summary(model)$coefficients[2, 1]
+}
+
+mean_b0 = mean(estimates$b0_hat)
+mean_b1 = mean(estimates$b1_hat)
+median_b0 = median(estimates$b0_hat)
+median_b1 = median(estimates$b1_hat)
+
+```
+
+```{r}
+head(estimates)
+tail(estimates)
+```
+
+The mean of $\beta_0$ across all simulations is `r mean_b0` and the median is `r median_b0`. The mean of $\beta_1$ across all simulations is `r mean_b1` and median is `r median_b1`. These are not quite where we would want them to be compared to part A, because we are taking a fairly small sample size ($n = 50$). As we increase the sample size, and number of iterations in the simulation, we will converge on our calculated estimates of $\beta_0$ and $\beta_1$ from part A.
+
+## Part D
+
+```{r d, echo = FALSE, include = FALSE}
+# Part D
+# case-control study
+datad = data[data$outcome == 1,]
+datan = data[data$outcome == 0,]
+estimatesd = data.frame(
+  "seed" = rep(NA, b),
+  "b0_hat" = rep(NA, b),
+  "b1_hat" = rep(NA, b)
+)
+
+for (i in 1:b) {
+  set.seed(i)
+  disease = sample(datad$exposure, N)
+  nodisease = sample(datan$exposure, N)
+  temp_dat = data.frame(
+    "outcome" = c(rep(1, N), rep(0, N)),
+    "disease" = c(disease, nodisease)
+  )
+  
+  model = glm(outcome ~ disease, family = binomial, data = temp_dat)
+  estimatesd$seed[i] = i
+  estimatesd$b0_hat[i] = summary(model)$coefficients[1, 1]
+  estimatesd$b1_hat[i] = summary(model)$coefficients[2, 1]  
+}
+
+dmean_b0 = mean(estimatesd$b0_hat)
+dmean_b1 = mean(estimatesd$b1_hat)
+
+dmedian_b0 = median(estimatesd$b0_hat)
+dmedian_b1 = median(estimatesd$b1_hat)
+```
+
+```{r}
+head(estimatesd)
+tail(estimatesd)
+```
+
+The mean of $\beta_0$ across all simulations is `r dmean_b0` and the median is `r dmedian_b0`. The mean of $\beta_1$ across all simulations is `r dmean_b1` and median is `r dmedian_b1`.
+
+## Part E
+
+```{r e, echo = FALSE, include = FALSE}
+# Part E
+# cohort study
+mad_b1 = mad(estimates$b1_hat)
+
+# case-control
+dmad_b1 = mad(estimatesd$b1_hat)
+
+```
+
+The median absolute deviance is lower for the case-control study (`r dmad_b1`) than the cohort study (`r mad_b1`). This is indicating the the efficiency of the log odds ratio may be better in the case-control style study, where we are modeling exposure based on disease, rather than modeling disease based on exposures. This is consistent with our understanding of case-control studies and cohort studies. Cohort studies require much larger populations, and case-control studies reach high power at lower population sizes.
+
+# Appendix
+```{r ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
+```

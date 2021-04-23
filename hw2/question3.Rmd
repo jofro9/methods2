@@ -1,0 +1,75 @@
+---
+title: "Question 3"
+author: "Joseph Froelicher"
+date: "2/26/2021"
+output: pdf_document
+---
+
+```{r setup, echo = FALSE, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Part A
+The odds of the adolescent having obtained condoms increased by a a factor of 4.04 for those adolescents who took part in an HIV educational program. The corresponding confidence interval was [1.17, 13.9], which does not contain 1, hence, there was a significant increase in the odds of an adolescent having obtained condoms if they took part in an HIV educational program.
+
+# Part B
+```{r b, echo = FALSE}
+# part B
+b1 = log(4.04)
+b2 = log(1.38)
+b3 = log(5.82)
+b4 = log(3.22)
+
+```
+$\hat{\beta_1}=$ `r b1`
+$\hat{\beta_2}=$ `r b2`
+$\hat{\beta_3}=$ `r b3`
+$\hat{\beta_4}=$ `r b4`
+
+# Part C
+We would need to know the probability of buying condoms when group, gender, SES and pifetime partners are all equal to 0.
+
+# Part D
+```{r d, echo = FALSE}
+# part D
+l = log(1.17)
+u = log(13.9)
+
+# Does b1 = (l + u) / 2?
+m = (l + u) / 2 # Close enough
+
+a = 0.05
+z = qnorm(1 - (a / 2))
+
+se1 = (m - l) / z
+se2 = (u - m) / z  # double check
+
+# reconstruct to triple check
+ci = c(exp(b1 - (z * se1)), exp(b1 + (z * se2))) # noice
+
+```
+Based on the corresponding Wald 95% confidence interval for the log odds ratio, the standard error for the `group` effect is `r se1`.
+
+# Part E
+```{r e, echo = FALSE}
+# part E
+l2 = log(1.23)
+u2 = log(12.88)
+
+# Does b2 = (l2 + u2) / 2?
+m2 = (l2 + u2) / 2 # Close enough
+
+se12 = (m2 - l2) / z
+se22 = (u2 - m2) / z  # double check
+
+# reconstruct to triple check
+ci2 = c(exp(b2 - (z * se12)), exp(b2 + (z * se22))) # not noice
+ci3 = c(exp(exp(b2) - (z * se12)), exp(exp(b2) + (z * se22))) # ahhh much better
+
+```
+Based on our confidence interval, the standard error for gender should be `r se12`. however, if we try to reconstruct that confidence interval using the provided odds ratio, we get [`r ci2[1]`, `r ci2[2]`], which doesn't match our provided confidence interval. However, if we use the provided 3.97 in the question as the odds ratio to reconstruct the confidence interval, we get [`r ci3[1]`, `r ci3[2]`], which matches the provided confidence interval. Hence, the actual odds ratio should read `r exp(exp(b2))`.
+\newpage
+
+# Appendix
+```{r ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
+```

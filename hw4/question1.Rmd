@@ -1,0 +1,42 @@
+---
+title: "Question 1"
+author: "Joseph Froelicher"
+date: "4/9/2021"
+output: pdf_document
+---
+
+```{r setup}
+knitr::opts_chunk$set(echo = TRUE, include = TRUE)
+
+```
+
+## Part A
+```{r a}
+skincancer = read.csv("skincancer.csv", header = TRUE)
+
+for (i in 1:dim(skincancer)[1]){
+  if (skincancer$city[i] == 'Dallas') {
+    skincancer$city[i] = 1
+  } else {
+    skincancer$city[i] = 0
+  }
+}
+
+model0 = glm(cases ~ city + offset(log(py1000)), family = "poisson", data = skincancer)
+table = summary(model0)$coefficients
+rownames(table) = c('Minneappolis (B0)', 'Dallas (B1)')
+colnames(table) = c('Estimate', 'Std. Error', 'Z-value', 'p-value')
+ci = exp(confint.default(model0))
+table
+
+```
+
+## Part B
+* $\beta_0$: the log rate of non-melanoma skin cancer for women in Minneapolis.
+* $\beta_1$: the log rate ratio of non-melanoma skin cancer for women in Dallas vs. women of Minneapolis.
+
+* $e^{\beta_0}$: The rate of non-melanoma skin cancer for women in Minneapolis is `r exp(table[1, 1])` (95% CI: [`r ci[1, 1]`, `r ci[1, 2]`]) cases per 1000 person years.
+* $e^{\beta_1}$: The rate of non-melanoma skin cancer for women in Dallas in cases per 1000 person years is `r exp(table[2, 1])` (95% CI: [`r ci[2, 1]`, `r ci[2, 2]`]) times the rate of non-melanoma skin cancer for women of Minneapolis.
+
+
+
