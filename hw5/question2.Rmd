@@ -26,7 +26,8 @@ $$ Y_{ij} = \beta_0 + \beta_1treatment_{ij} + \beta_2time_{ij} + \beta_3(treatme
 In the model above, the fixed effects are the treatment, time, and the interaction term of treatment and time, whose coefficients are represented by $\beta_i$. The random effects for the model above are the subject ID's, represented by $b_i$.
 
 ## Part C
-```{r c}
+```{r c, echo = FALSE}
+# Part C
 model0 = lmer(y ~ (1  | id) + factor(trt) + time + factor(trt) * time , data = data)
 output = summary(model0)
 fixed = coef(output)
@@ -43,7 +44,8 @@ rand
 ```
 
 ## Part D
-```{r d}
+```{r d, include = FALSE, echo = FALSE}
+# Part D
 sigma_b = 10.678
 sigma = 1.212
 icc = sigma_b / (sigma + sigma_b)
@@ -60,3 +62,7 @@ The random intercept term, when treatment group is 1, was statistically signific
 
 ## Part G
 While it appeared from our plots that there may be a difference between the two treatment groups in strength, nothing in our anaylsis has suggest a statistically significant difference between the two treatment groups.
+
+# Appendix
+```{r ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
+```
