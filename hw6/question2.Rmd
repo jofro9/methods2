@@ -1,0 +1,103 @@
+---
+title: "Question 2"
+author: "Joseph Froelicher"
+date: "4/30/2021"
+output: pdf_document
+---
+
+```{r setup, echo=FALSE, include = TRUE, warning = FALSE, message = FALSE}
+knitr::opts_chunk$set(include = TRUE, echo = TRUE, warning = FALSE)
+
+library(geepack)
+library(tidyr)
+library(tidyverse)
+
+data(seizure)
+seizure$id = as.factor(1:dim(seizure)[1])
+data = pivot_longer(data = seizure, cols = c("y1", "y2", "y3", "y4"), names_to = "time", values_to = "counts")
+data$trt = factor(data$trt)
+data = as.data.frame(data)
+
+```
+
+## Part A
+$$$$
+
+
+## Part B
+```{r b, echo=FALSE, include = TRUE, warning = FALSE, message = FALSE}
+# part b
+model0 = geeglm(
+  counts ~ base + trt + age + time,
+  id = id,
+  data = data,
+  family = poisson,
+  corstr = "exchangeable"
+)
+
+results = summary(model0)$coefficients
+results = results[,-3]
+colnames(results) = c("estimates", "standard errors", "P-values")
+rownames(results) = c("intercept","baseline", "treatment group = 1", "age", "timepoint = 2", "timepoint = 3", "timepoint = 4")
+
+results
+
+summary = summary(model0)
+corr = summary$corr
+
+```
+The estimate correlation coefficient for the model that controls for baseline seizures, with treatment, age and time as predictors is `r round(corr, 3)`.
+
+## Part C
+```{r c, echo = FALSE, include = TRUE, warning = FALSE, message = FALSE}
+# part c
+model1 = geeglm(
+  counts ~ base + trt + age + time,
+  id = id,
+  data = data,
+  family = poisson,
+  corstr = "independence"
+)
+
+corr_comparison = bind_rows(
+  mutate(tidy(model1), working_cor =  "ind", qic = QIC(model1)[1]),
+  mutate(tidy(model0), working_cor =  "exch", qic = QIC(model0)[1])
+) %>%
+  select(working_cor, qic, term, estimate, std.error, p.value) %>%
+  arrange(term) %>%
+  mutate(p.value = format.pval(p.value)) %>%
+  knitr::kable()
+
+corr_comparison
+
+```
+Given that there is some variation between the points, we may want to consider some other correlation structures. 
+
+The estimates are very similar between independent and exchangeable correlation, and thus, the model we choose won't matter if we are interested in the population estimates. That being said, the independent correlation structure has a lower QIC and thus we would probably choose that model. 
+
+## Part D
+```{r d, echo = FALSE, include = TRUE, warning = FALSE, message = FALSE}
+# part d
+b0 = exp(results[1, 1])
+b1 = exp(results[2, 1])
+b2 = exp(results[3, 1])
+b3 = exp(results[4, 1])
+b4 = exp(results[5, 1])
+b5 = exp(results[6, 1])
+b6 = exp(results[7, 1])
+
+```
+
+* $e^{\beta_0}$ = `r b0`: The expected rate ratio of seizures at the first time point for patients with no treatment baseline number of seizures equal to zero, and age equal to zero (note we should not be interpreting this coeefficent because age zero baseline zero are extrapolating outside of the scope of our data).
+* $e^{\beta_{baseline}}$ = `r b1`: The expected rate of seizures for at baseline when compared to the first timepoint, controlling for timepoint, age, and treatment.
+* $e^{\beta_{treatment = 1}}$ = `r b2`: The expected increase in rate of seizures for treatment group 1 over treatment group 0 when controling for baseline, age, and time point.
+* $e^{\beta_{age}}$ = `r b3`: The expected increase in rate of seizures for one year increase in age when controlling for baseline treatment group and timepoint.
+* $e^{\beta_{time = 2}}$ = `r b4`: The expected increase in rate of seizures when compared to the first timepoint, while controlling for baseline, age and treatment group.
+* $e^{\beta_{time = 3}}$ = `r b5`: The expected increase in rate of seizures when compared to the second timepoint, while controlling for baseline, age and treatment group.
+* $e^{\beta_{time = 4}}$ = `r b6`: The expected increase in rate of seizures when compared to the third timepoint, while controlling for baseline, age and treatment group.
+
+\newpage
+
+## Apendix
+```{r ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
+```
