@@ -30,7 +30,7 @@ if ((dim(data)[1] / 4) == dim(seizure)[1]) {
 }
 
 ```
-We can say the data is balanced because there are the same number of time points for each patient id (N = 4).
+We can say the data is balanced because there are the same number of time points (n = 4) for each patient id (N = 59).
 
 ## Part B
 ```{r b, echo = FALSE, include = TRUE, message = FALSE}
@@ -61,12 +61,13 @@ seizure_residuals_wide = seizure_residuals %>%
   pivot_wider(
     names_from = time,
     values_from = residuals
-  )
+  ) %>%
+  select(-id)
 
 ggpairs(seizure_residuals_wide)
 
 ```
-Based on the plot abover, there are not any immediate visual correlation structures, and furthermore, the values of correlations between time points is quite similar, and does not follow any pattern based on time points. We would likely not want to assume that the correlations are different based on these plots, thus I would choose exchangeable correlation as our working correlation structure. This seems reasonable because we have well balanced data, and the correlation between any given two covariates residuals is roughly equal. Furthermore, we very clearly should not assume independence between timepoints based on the high values of correlations between time points.
+Based on the plot above, the values of correlations between time points is quite similar, and does not follow any pattern based on time points. We would likely not want to assume that the correlations are different based on these plots, thus I would choose exchangeable correlation as our working correlation structure. This seems reasonable because we have well balanced data, and the correlation between any given two covariates residuals is roughly equal. Furthermore, we very clearly should not assume independence between timepoints based on the high values of correlations between time points.
 \newpage
 
 ## Appendix
