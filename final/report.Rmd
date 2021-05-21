@@ -1,0 +1,321 @@
+---
+title: "The effects of stress on coronary heart disease as measured by catecholamines"
+author: "Froelicher J"
+date: "May 10, 2021"
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 2
+header-includes:
+  - \usepackage{titling}
+  - \pretitle{\begin{center}
+    \includegraphics[width = 6in, height = 5in]{csph_logo.jpg}\LARGE\\}
+  - \posttitle{\end{center}}
+---
+
+```{r setup, echo = FALSE, include = FALSE, warning = FALSE}
+# libraries
+library(caret)
+library(finalfit)
+library(ggcorrplot)
+library(ggplot2)
+library(kableExtra)
+library(pROC)
+library(tableone)
+library(tidyverse)
+
+knitr::opts_chunk$set(echo = TRUE)
+
+# data
+data = read.csv("evanscounty.csv")
+
+```
+
+\newpage
+\twocolumn
+\section{DATA}
+The data are from a prospective cohort study of 609 white males in Evans County, Georgia who
+were followed for 7 years. We are interested in the association between coronary heart
+disease (CHD) and stress, as measured by catecholamine level in the blood (adrenal glands send
+catecholamines into your blood when you are physically or emotionally stressed). Other potential
+confounding variables were measured as well. The data dictionary is provided below.
+
+* id: the subject identifier
+* chd: the outcome, coronary heart disease status (0 = no chd, 1 = chd)
+* cat: catecholamine level, the main exposure of interest (0 = normal, 1 = high)
+* age: age in years
+* chl: cholesterol level (mg/dL)
+* smk: smoking status (0 = nonsmoker, 1 = smoker)
+* ecg: ECG status (0 = normal, 1 = abnormal)
+* dbp: diastolic blood pressure
+* sbp: systolic blood pressure
+* hpt: hypertension status (0 = normal, 1 = high blood pressure)
+
+Provide in the table below are counts of categorical variables, and means and standard deviations of continuous variables
+\newline
+
+
+```{r table1, echo = FALSE, include = FALSE, fig.align = "center", fig.width = 5}
+# create table one
+data_table1 = data
+
+data_table1$chd <- as.factor(data_table1$chd)
+levels(data_table1$chd) = c(
+  `0` = "No CHD" ,
+  `1` = "CHD"
+)
+
+data_table1$cat <- as.factor(data_table1$cat)
+levels(data_table1$cat) = c(
+  `0` = "Normal(%)",
+  `1` = "High(%)"
+)
+
+data_table1$smk <- as.factor(data_table1$smk)
+levels(data_table1$smk) = c(
+  `0` = "Non-smoker(%)" ,
+  `1` = "smoker(%)"
+)
+
+data_table1$ecg <- as.factor(data_table1$ecg)
+levels(data_table1$ecg) = c(
+  `0` = "Normal(%)" ,
+  `1` = "Abnormal(%)"
+)
+
+data_table1$hpt <- as.factor(data_table1$hpt)
+levels(data_table1$hpt) = c(
+  `0` = "Normal(%)" ,
+  `1` = "High(%)"
+)
+
+names = dput(names(data_table1))
+catvars = names[c(3, 7, 10)]
+names = names[c(-1, -2)]
+
+table1 = data_table1 %>% summary_factorlist('chd', names, p = FALSE, na_include = TRUE)
+
+```
+
+```{r, echo = FALSE, fig.width = 3}
+kable(as.matrix(table1), booktabs = T)
+
+```
+\textbf{Table 1.} Descriptive statistics for 609 white males from Evans county, Georgia, who were followed for 7 years.
+
+As seen in Table 1 and and Figure 1 below, coronoray heart disease was not very common amongst the 609 individuals enrolled in the cohort study.
+
+```{r figure1, echo = FALSE, includE = TRUE, fig.align = "center", fig.width = 5}
+# figure 1
+
+ggplot(data_table1, aes(x = chd, fill = cat)) +
+  geom_bar(position = "stack") +
+  ggtitle("Occurence of Coronary heart disease by catecholamine level") +
+  theme(axis.title.x = element_blank()) +
+  labs(fill = "Catecholamine")
+
+```
+\textbf{Figure 1.} Bar plot of counts of Coronary heart disease for 609 individuals in Evans county, Georgia, colored by Catecholamine levels.
+
+We can see in figure 1 that there may be a relationship between individuals without coronary heart diesase and with normal Catecholamine levels. We should note this as an interesting finding in the pursuit of the question of a relationship between Catecholamine and Coronary heart disease.
+
+```{r figure2, echo = FALSE, includE = TRUE, fig.align = "right", fig.width = 4.5}
+# figure 2
+corr = cor(data[-1])
+ggcorrplot(corr)
+
+```
+\textbf{Figure 2.} Correlations between covariates of potential interest collected on 609 individuals from Evans county, Georgia. See data dictionary above for descriptions.
+
+From figure 2, note the large magnitude of the correlation between cholesterol and catecholamine levels (negative correlation), this should be identified as a possible interaction for our model.
+
+```{r models, echo = FALSE, include = FALSE, warning = FALSE}
+# model with just reponse and outcomes
+model0 = glm(chd ~ factor(cat), family = binomial, data = data)
+output0 = summary(model0)
+
+# model with all covariates
+model_full = glm(chd ~ factor(cat) + factor(smk) + factor(ecg) + factor(hpt) + age + chl + dbp + sbp, family = binomial, data = data)
+output_full = summary(model_full)
+
+# model with insignificant covariates removed'
+model1 = glm(chd ~ factor(cat) + factor(smk) + age + chl, family = binomial, data = data)
+output1 = summary(model1)
+
+# interaction model
+model_int = glm(chd ~ factor(cat) + factor(smk) + age + chl + factor(cat) * chl, family = binomial, data = data)
+output_int = summary(model_int)
+
+```
+
+```{r diagnostics, echo = FALSE, include = FALSE, warning = FALSE}
+# residuals
+# model 0
+data %>%
+  mutate(pearson_resid = resid(model0, type = "pearson")) %>%
+  ggplot(aes(id, pearson_resid)) +
+  geom_hline(yintercept = 0, linetype = 2, color = "gray") +
+  geom_point() +
+  labs(x = "ID number", y = "Pearson residuals", title = "Pearson residuals")
+
+data %>%
+  mutate(deviance_resid = resid(model0, type = "deviance")) %>%
+  ggplot(aes(id, deviance_resid)) +
+  geom_hline(yintercept = 0, linetype = 2, color = "gray") +
+  geom_point() +
+  labs(x = "ID number", y = "Deviance residuals", title = "Deviance residuals")
+
+# model 1
+data %>%
+  mutate(pearson_resid = resid(model1, type = "pearson")) %>%
+  ggplot(aes(id, pearson_resid)) +
+  geom_hline(yintercept = 0, linetype = 2, color = "gray") +
+  geom_point() +
+  labs(x = "ID number", y = "Pearson residuals", title = "Pearson residuals")
+
+data %>%
+  mutate(deviance_resid = resid(model1, type = "deviance")) %>%
+  ggplot(aes(id, deviance_resid)) +
+  geom_hline(yintercept = 0, linetype = 2, color = "gray") +
+  geom_point() +
+  labs(x = "ID number", y = "Deviance residuals", title = "Deviance residuals")
+
+# interaction model
+figure3 = data %>%
+  mutate(pearson_resid = resid(model_int, type = "pearson")) %>%
+  ggplot(aes(id, pearson_resid)) +
+  geom_hline(yintercept = 0, linetype = 2, color = "gray") +
+  geom_point() +
+  labs(x = "ID number", y = "Pearson residuals", title = "Pearson residuals")
+
+data %>%
+  mutate(deviance_resid = resid(model_int, type = "deviance")) %>%
+  ggplot(aes(id, deviance_resid)) +
+  geom_hline(yintercept = 0, linetype = 2, color = "gray") +
+  geom_point() +
+  labs(x = "ID number", y = "Deviance residuals", title = "Deviance residuals")
+
+```
+
+\section{METHODS}
+For the Evans county cohort, because the response and outcome variables are both binary, and the investigators have identified an interest in additional covariates, the method of choice selcted is a logistic regression. We are assuming the data are distributed as follows:
+$$X_i \sim Bernoulli(p)$$
+$$Y = \sum X_i$$
+$$Y\sim binomial(n, p)$$
+We also need to assume that the observations and errors are independent of eachother, no multicollinearity between out covariates of interest, and a linear relationship between the log odds (link function) and the covariates of interest. Additionally, there should be concern for sufficient sample size, in our case $n = 609$ is sufficient. The link function for logistic regression is as follows:
+$$g(\mu) = ln \left( \frac{\mu}{1-\mu} \right)$$
+$$\mu = E(Y)$$
+The researchers have examined four models, a model containing only the outcome and response of interest (traditional model), a model containing all covariates (full model), and a model containing all statistically significant covariates of interest (selection model), and a model containing all statistically significant covariates of interest as well as cholesterol and an interaction term for Chatecholamine levels and cholesterol levels (interaction model). The selection model was chosen using backwards selection ($\alpha = 0.05$). Provided in table 2 are the Akaike information criterion, Bayesian criterion and $R^2$ values for each model.
+
+\section{RESULTS}
+
+The results logistic regression of four different models is provided in the following section. As we would expect, the full model has the highest BIC, for it has the most parameters in the model.
+\newline
+
+```{r table2, echo = FALSE, include = TRUE, warning = FALSE, comment = FALSE, message = FALSE}
+# define function to get predictive measures based on what model is input
+get_predictive_measures = function(model_of_interest, model_name){
+  r_squared = rcompanion::nagelkerke(model_of_interest)
+  
+  tibble(
+    model = model_name,
+    aic = AIC(model_of_interest),
+    bic = BIC(model_of_interest),
+    gen_Rsq = round(r_squared$Pseudo.R[2], 3),
+  )
+}
+
+measures1 = get_predictive_measures(model0, "traditional model")
+measures2 = get_predictive_measures(model_full, "full model")
+measures3 = get_predictive_measures(model1, "selection model")
+measures4 = get_predictive_measures(model_int, "interaction model")
+table2 = full_join(full_join(full_join(measures1, measures2), measures3), measures4)
+colnames(table2) = c("Model", "AIC", "BIC", "R^2")
+
+kable(table2, booktabs = T)
+
+```
+\textbf{Table 2.} Model selection criterion for each of the four logistic regression models of the 609 white male patients from Evans county, Georgia.
+
+The model with the lowest AIC, BIC and highest $R^2$ is the interaction model. This is the chosen model, and provided below in figure 3 are the Pearson residuals of the interaction model. There are a couple of possible outliers of concern in the residual plot, however not enough to warrant further exploration.
+
+```{r figure3, echo = FALSE, includE = TRUE, fig.align = "left", fig.width = 5}
+figure3
+
+```
+\textbf{Figue 3.} Pearson residuals of logistic regression model of 609 white males from Evans county, Georgia. Model includes Catecholamine levels as the response variable, as well as smoking status, cholesterol levels, age and the interaction of Catecholamine levels and cholesterol levels.
+
+```{r table3, echo = FALSE, include = TRUE, warning = FALSE, comment = FALSE, message = FALSE}
+# table 3
+table3 = round(output_int$coefficients, 3)
+colnames(table3) = c("Estimate", "SE", "Z", "P-value")
+rownames(table3) = c("Intercept", "Cat", "Smk", "Age", "Chl", "Inter")
+kable(table3, booktabs = T)
+
+```
+\textbf{Table 3.} Results from the logistic regression of 609 white males from Evans county georgia, including coefficient estimates, standard errors, Z-scores and P-values.
+
+```{r results, echo = FALSE, include = FALSE, message = FALSE, warning = FALSE}
+# beta coefficients
+b2 = round(exp(table3[3, 1]), 3)
+b3 = round(exp(table3[4, 1]), 3)
+b5 = round(exp(table3[6, 1]), 3)
+
+alpha = 0.05
+z = qnorm(1 - (alpha / 2))
+
+b2_ci = round(exp((z * table3[3, 2])), 3)
+b4_ci = round(exp((z * table3[4, 2])), 3)
+b5_ci = round(exp((z * table3[6, 2])), 3)
+
+```
+
+Because the intercept term in this scenario represents an individual with an age of zero, and cholesterol of zero, we will not be interpreting the intercept. Based on the results of the model, we know that high levels of catecholamine was significant in the prediction of coronary heart disease (p = `r table3[1, 4]`), however it did not represent a clinically meaningful increase in the odds of coronary heart disease. The odds of coronary heart disease increased by a factor of `r b2` $\pm$ `r b2_ci` (p = `r table3[3, 4]`) for men who smoke. For a one year increase in age, the odds of coronary heart disease for men increased by a factor of `r b3` $\pm$ `r b2_ci` (p = `r table3[4, 4]`). Cholesterol was not a significant predictor of coronary heart disease (p = `r table3[5, 4]`), however, for those men who had high levels of catecholamine, a unit increase of cholesterol indicates a `r b5` $\pm$ `r b2_ci` (p < 0.001) times increase in the odds of coronary heart diesease ocurring.
+
+\section{PREDICTION}
+
+The investigative team performed a secondary analysis, in which we decided to assess the predictive capacity of our model. Using a threshold of 0.5 on our predicted probabilites of our interaction model, the confusion matrix is as follows:
+\newline
+
+```{r confusion, echo = FALSE, include = FALSE, warning = FALSE}
+# confusion matrix
+cmat = caret::confusionMatrix(
+  data = factor(as.numeric(predict(model_int, type = "response") > 0.5)),
+  reference = factor(as.numeric(model1$y))
+)
+
+table4 = cmat$table
+```
+
+```{r table4, echo = FALSE, include = TRUE, warning = FALSE, message = FALSE}
+colnames(table4) = c("Ref. Pos.", "Ref. Neg.")
+rownames(table4) = c("Pred. Pos.", "Pred. Neg.")
+kable(table4, booktabs = T)
+pvp = round(table4[1, 1] / sum(table4[1, ]), 3)
+pvn = round(table4[2, 2] / sum(table4[2, ]), 3)
+
+```
+\textbf{Table 4.} Confusion matrix for the logistic regression interaction model chose for the Evans county coronary heart disease data.
+
+The positive predictive value using a threshold of 0.5 was `r pvp`, and the negative predictive value was `r pvn`. In other words, `r (1 - pvn) * 100`% of negative predictions were false negatives, and `r (1 - pvp) * 100`% of positive predictions were false positives. The research team also examined the reveiver operator characteristic curve for the predictive values vs. the measured values, as a measure of predictive capability of the model. The results of the ROC curve is provided in figure 4.
+
+```{r figure4, echo = FALSE, includE = TRUE, fig.align = "center", fig.width = 5, message = FALSE, warning = FALSE}
+# roc curve
+model_roc = roc(model_int$y, model_int$fitted.values)
+pROC::ggroc(model_roc) + ggtitle("ROC curve for interaction model")
+
+```
+\textbf{Figure 4.} ROC curve for the logistic regression interaction model for the Evans county, Georgia coronary heart disease data.
+
+```{r auc, echo = FALSE, include = TRUE, warning = FALSE, message = FALSE}
+auc = model_roc$auc
+
+```
+
+The area under the ROC curve is `r round(auc, 3)`. The area under the curve for the predictive capability of the interaction model is relatively high, we would at lease consider this model as a predictive test for coronary heart disease. This value is simply the probability that a randomly chosen instance of coronary heart disease ranks higher that a randomly chosen instance of not having coronary heart disease. So `r 100 * round(auc, 3)`% of randomly chosen instances of coronary heart disease rank higher than randomly chosen instances of not having coronary heart disease.
+
+\onecolumn
+\section{APPENDIX}
+
+```{r ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
+```

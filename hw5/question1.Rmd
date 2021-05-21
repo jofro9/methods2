@@ -17,7 +17,7 @@ data = read_dta('exercise_therapy.dta')
 ```
 
 ## Part A
-```{r a}
+```{r a, echo = FALSE, warning = FALSE}
 labelled_data = data
 labelled_data$trt = as.factor(labelled_data$trt)
 
@@ -40,7 +40,7 @@ labelled_data %>% ggplot(aes(time, y, group = id)) +
 For both treatment group 1 and treatment group 2, strength appears to be increasing over time, on average for all patients. Treatment group 2 also appears to have slightly higher values of strength for all times.
 
 ## Part B
-```{r b}
+```{r b, warning = FALSE}
 # plot 2
 labelled_data %>% ggplot(aes(time, y, group = id)) +
   geom_point(size = 0.5) +
@@ -54,5 +54,6 @@ We can see more clearly now that treatment group is in fact experience higher st
 ## Part C
 There is certainly a visual difference in intercept for subjects, and we should at least consider a random intercept model. The slopes of the individuals is more difficult to dicern from this plot, but because of the shapes of the individual trends, we should at the very least consider using a random slope model as well. There is some indication, based on the average slope for each of the treatment groups that there may not be much diffence of slopes between subjects, which would lead us to possibly consider not using a random slope model.
 
-
-
+# Appendix
+```{r ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
+```

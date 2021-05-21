@@ -1,0 +1,106 @@
+---
+title: "Question 2"
+author: "Joseph Froelicher"
+date: "4/30/2021"
+output: pdf_document
+---
+
+```{r setup, echo=FALSE, include = TRUE, warning = FALSE, message = FALSE}
+knitr::opts_chunk$set(include = TRUE, echo = TRUE, warning = FALSE)
+
+library(geepack)
+library(tidyr)
+library(tidyverse)
+
+data(seizure)
+seizure$id = as.factor(1:dim(seizure)[1])
+data = pivot_longer(data = seizure, cols = c("y1", "y2", "y3", "y4"), names_to = "time", values_to = "counts")
+data$trt = factor(data$trt)
+data = as.data.frame(data)
+
+```
+
+## Part A
+$$Y_{counts} = \beta_0 + \beta_{baseline}X_1 + \beta_{treatment}X_2 + \beta_{age}X_3 + \beta_{time,\:j}X_{4,\:j}$$
+
+
+## Part B
+```{r b, echo=FALSE, include = TRUE, warning = FALSE, message = FALSE}
+# part b
+model0 = geeglm(
+  counts ~ base + trt + age + time,
+  id = id,
+  data = data,
+  family = poisson,
+  corstr = "exchangeable"
+)
+
+results = summary(model0)$coefficients
+results = results[,-3]
+colnames(results) = c("estimates", "standard errors", "P-values")
+rownames(results) = c("intercept","baseline", "treatment group = 1", "age", "timepoint = 2", "timepoint = 3", "timepoint = 4")
+
+results
+
+summary = summary(model0)
+corr = summary$corr
+
+```
+The estimate correlation coefficient for the model that controls for baseline seizures, with treatment, age and time as predictors is `r round(corr[1], 3)`.
+
+## Part C
+```{r c, echo = FALSE, include = TRUE, warning = FALSE, message = FALSE}
+# part c
+model1 = geeglm(
+  counts ~ base + trt + age + time,
+  id = id,
+  data = data,
+  family = poisson,
+  corstr = "unstructured"
+)
+
+corr_comparison = bind_rows(
+  mutate(tidy(model1), working_cor =  "unst", qic = QIC(model1)[1]),
+  mutate(tidy(model0), working_cor =  "exch", qic = QIC(model0)[1])
+) %>%
+  select(working_cor, qic, term, estimate, std.error, p.value) %>%
+  arrange(term) %>%
+  mutate(p.value = format.pval(p.value)) %>%
+  knitr::kable()
+
+corr_comparison
+
+```
+While the correlations are roughly the same, they are not identical, and it may be of interest to examine some other correlation structure. Here we are examining unstructured correlation, allowing for the correlations to vary. The estimates are very similar between unstructured and exchangeable correlation, so it really won't matter which model we choose. However, seeing as the correlation to seem to be exchageable, and the QIC value of the unstructured model is not significantly better (< 6) than the model with exchangeable correlation structure, and therefore we should stick with our model that best fits the correlation structure.
+
+## Part D
+```{r d, echo = FALSE, include = TRUE, warning = FALSE, message = FALSE}
+# part d
+results2 = summary(model0)$coefficients
+results2 = results2[,-3]
+colnames(results2) = c("estimates", "standard errors", "P-values")
+rownames(results2) = c("intercept","baseline", "treatment group = 1", "age", "timepoint = 2", "timepoint = 3", "timepoint = 4")
+
+b0 = exp(results[1, 1])
+b1 = exp(results[2, 1])
+b2 = exp(results[3, 1])
+b3 = exp(results[4, 1])
+b4 = exp(results[5, 1])
+b5 = exp(results[6, 1])
+b6 = exp(results[7, 1])
+
+```
+
+* $e^{\beta_0}$ = `r b0`: The expected rate ratio of seizures at the first time point for patients with no treatment, baseline number of seizures equal to zero, and age equal to zero (note we should not be interpreting this coeefficent because age zero and baseline zero are extrapolating outside of the scope of our data).
+* $e^{\beta_{baseline}}$ = `r b1`: The expected increase in rate ratio of seizures at baseline when compared to the first timepoint, controlling for timepoint, age, and treatment, for a unit increase in the number of seizures at baseline.
+* $e^{\beta_{treatment = 1}}$ = `r b2`: The expected increase in rate ratio of seizures for treatment group 1 over treatment group 0 when controling for baseline, age, and time point.
+* $e^{\beta_{age}}$ = `r b3`: The expected increase in rate ratio of seizures for one year increase in age when controlling for baseline, treatment group, and timepoint.
+* $e^{\beta_{time = 2}}$ = `r b4`: The expected increase in rate ratio of seizures when compared to the first timepoint, while controlling for baseline, age and treatment group.
+* $e^{\beta_{time = 3}}$ = `r b5`: The expected increase in rate ratio of seizures when compared to the first timepoint, while controlling for baseline, age and treatment group.
+* $e^{\beta_{time = 4}}$ = `r b6`: The expected increase in rate ratio of seizures when compared to the first timepoint, while controlling for baseline, age and treatment group.
+
+\newpage
+
+## Apendix
+```{r ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
+```
